@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,91 +11,29 @@ import { useToast } from "@/hooks/use-toast"
 import { Gamepad2, Mail, Lock, User } from "lucide-react"
 
 export default function AuthForm() {
-  const [loading, setLoading] = useState(false)
-  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { toast } = useToast()
 
-  const handleSignUp = async (formData: FormData) => {
-    setLoading(true)
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
+    const formData = new FormData(e.currentTarget)
     const email = formData.get("email") as string
     const password = formData.get("password") as string
-    const full_name = formData.get("username") as string
+    const isSignUp = e.currentTarget.dataset.mode === "signup"
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name,
-          },
-        },
-      })
-
-      if (error) {
-        console.error('Supabase signUp error:', error)
-        throw error
-      }
-
-      if (data.user) {
-        // Only insert into user_settings, NOT profiles
-        const { error: settingsError } = await supabase.from("user_settings").insert([
-          {
-            id: data.user.id,
-            theme: "light",
-            notifications_enabled: true,
-          },
-        ])
-        if (settingsError) {
-          console.error('Supabase user_settings insert error:', settingsError)
-          throw settingsError
-        }
-      }
-
-      toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account.",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      })
+      // TODO: Implement your new authentication logic here
+      console.log("Authentication logic to be implemented")
+    } catch (err) {
+      setError("An error occurred during authentication")
+      console.error("Authentication error:", err)
     } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSignIn = async (formData: FormData) => {
-    setLoading(true)
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) throw error
-
-      toast({
-        title: "Welcome back!",
-        description: "You have been signed in successfully.",
-      })
-      
-      // Redirect to home page after successful sign-in
-      router.push("/")
-      router.refresh()
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -130,7 +67,7 @@ export default function AuthForm() {
             </TabsList>
 
             <TabsContent value="signin">
-              <form action={handleSignIn} className="space-y-4">
+              <form onSubmit={handleSubmit} data-mode="signin" className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email" className="text-gray-300">
                     Email
@@ -144,6 +81,7 @@ export default function AuthForm() {
                       placeholder="Enter your email"
                       required
                       className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -160,21 +98,22 @@ export default function AuthForm() {
                       placeholder="Enter your password"
                       required
                       className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
                 <Button
                   type="submit"
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  disabled={loading}
+                  disabled={isLoading}
                 >
-                  {loading ? "Signing in..." : "Sign In"}
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
             </TabsContent>
 
             <TabsContent value="signup">
-              <form action={handleSignUp} className="space-y-4">
+              <form onSubmit={handleSubmit} data-mode="signup" className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-username" className="text-gray-300">
                     Username
@@ -188,6 +127,7 @@ export default function AuthForm() {
                       placeholder="Choose a username"
                       required
                       className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -204,6 +144,7 @@ export default function AuthForm() {
                       placeholder="Enter your email"
                       required
                       className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -220,19 +161,23 @@ export default function AuthForm() {
                       placeholder="Create a password"
                       required
                       className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
                 <Button
                   type="submit"
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  disabled={loading}
+                  disabled={isLoading}
                 >
-                  {loading ? "Creating account..." : "Sign Up"}
+                  {isLoading ? "Creating account..." : "Sign Up"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
+          {error && (
+            <div className="text-red-500 text-sm text-center mt-4">{error}</div>
+          )}
         </CardContent>
       </Card>
     </div>

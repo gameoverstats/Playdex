@@ -13,4 +13,4 @@ export function getSupabaseClient() {
   return supabaseClient
 }
 
-export const supabase = getSupabaseClient()
+export const supabase = getSupabaseClient() 

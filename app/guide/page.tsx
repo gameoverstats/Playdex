@@ -42,9 +42,9 @@ export default function GuidePage() {
         .order("created_at", { ascending: false })
 
       if (error) throw error
-      setGuides(data || [])
+      setGuides((data as unknown as Guide[]) || [])
       if (data && data.length > 0) {
-        setSelectedGuide(data[0])
+        setSelectedGuide(data[0] as unknown as Guide)
       }
     } catch (error: any) {
       toast({
@@ -67,8 +67,8 @@ export default function GuidePage() {
       if (tasksResult.error) throw tasksResult.error
       if (missionsResult.error) throw missionsResult.error
 
-      setDailyTasks(tasksResult.data || [])
-      setWeeklyMissions(missionsResult.data || [])
+      setDailyTasks((tasksResult.data as unknown as DailyTask[]) || [])
+      setWeeklyMissions((missionsResult.data as unknown as WeeklyMission[]) || [])
     } catch (error: any) {
       toast({
         title: "Error",
@@ -92,7 +92,7 @@ export default function GuidePage() {
         .eq("guide_id", guideId)
 
       if (error) throw error
-      setUserProgress(data || [])
+      setUserProgress((data as unknown as UserProgress[]) || [])
     } catch (error: any) {
       toast({
         title: "Error",

@@ -42,7 +42,7 @@ export default function ProfilePage() {
         .single()
 
       if (profileError) throw profileError
-      setUser(profile)
+      setUser(profile as unknown as User)
 
       // Fetch user games
       const { data: games, error: gamesError } = await supabase
@@ -54,7 +54,7 @@ export default function ProfilePage() {
         .eq("user_id", authUser.id)
 
       if (gamesError) throw gamesError
-      setUserGames(games || [])
+      setUserGames((games as unknown as UserGame[]) || [])
 
       // Fetch user progress
       const { data: progress, error: progressError } = await supabase
@@ -63,7 +63,7 @@ export default function ProfilePage() {
         .eq("user_id", authUser.id)
 
       if (progressError) throw progressError
-      setUserProgress(progress || [])
+      setUserProgress((progress as unknown as UserProgress[]) || [])
     } catch (error: any) {
       toast({
         title: "Error",

@@ -51,7 +51,7 @@ export default function TrackerPage() {
         .order("created_at", { ascending: false })
 
       if (error) throw error
-      setUserGames(data || [])
+      setUserGames((data as unknown as UserGame[]) || [])
     } catch (error: any) {
       toast({
         title: "Error",
@@ -68,7 +68,7 @@ export default function TrackerPage() {
       const { data, error } = await supabase.from("games").select("*").order("name")
 
       if (error) throw error
-      setGames(data || [])
+      setGames((data as unknown as Game[]) || [])
     } catch (error: any) {
       toast({
         title: "Error",
