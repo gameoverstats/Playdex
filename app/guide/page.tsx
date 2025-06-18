@@ -10,8 +10,11 @@ import { BookOpen, Trophy, CheckCircle, Circle, Flame } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { Guide, DailyTask, WeeklyMission, UserProgress } from "@/lib/types"
 import Image from "next/image"
+import { GameSelection } from "@/components/guide/game-selection"
+import { PUBGGuide } from "@/components/guide/pubg-guide"
 
 export default function GuidePage() {
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [guides, setGuides] = useState<Guide[]>([])
   const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null)
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([])
@@ -175,12 +178,23 @@ export default function GuidePage() {
     )
   }
 
+  // Show game selection if no game is selected
+  if (!selectedGame) {
+    return <GameSelection onGameSelect={setSelectedGame} />;
+  }
+
+  // Show PUBG guide if PUBG is selected
+  if (selectedGame === 'PUBG') {
+    return <PUBGGuide onBack={() => setSelectedGame(null)} />;
+  }
+
+  // Show default guide interface for other games
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Improvement Guides</h1>
-          <p className="text-gray-300">Follow structured plans to rank up and improve your gameplay</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Game Guides</h1>
+          <p className="text-gray-300">Select a guide to get started</p>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-6">

@@ -41,8 +41,23 @@ export default function ProfilePage() {
         .eq("id", authUser.id)
         .single()
 
-      if (profileError) throw profileError
-      setUser(profile as unknown as User)
+      let userProfile: User | null = null
+      if (profileError && profileError.code !== "PGRST116") throw profileError
+      if (profile) {
+        userProfile = profile as unknown as User
+      } else {
+        // Fallback: create a default profile from authUser
+        userProfile = {
+          id: authUser.id,
+          email: authUser.email ?? "",
+          full_name: authUser.email?.split("@")[0] ?? "User",
+          avatar_url: undefined,
+          bio: "",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      }
+      setUser(userProfile)
 
       // Fetch user games
       const { data: games, error: gamesError } = await supabase
@@ -151,9 +166,9 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-6">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={user.avatar_url || "/placeholder.svg"} alt={user.full_name} />
+                  <AvatarImage src={user.avatar_url || "/placeholder.svg"} alt={user.full_name || "User"} />
                   <AvatarFallback className="bg-purple-600 text-white text-2xl">
-                    {user.full_name.charAt(0).toUpperCase()}
+                    {(user.full_name || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>

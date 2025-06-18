@@ -84,3 +84,20 @@ export interface NewsArticle {
   published_at?: string
   created_at: string
 }
+
+export interface PUBGTask {
+  text: string;
+  completed: boolean;
+}
+
+export interface PUBGDayPlan {
+  day: string;
+  focusArea: string;
+  tasksList: PUBGTask[];
+}
+
+export interface PUBGWeeklyPlanner {
+  title: string;
+  subtitle: string;
+  tasks: PUBGDayPlan[];
+}
