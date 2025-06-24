@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Gamepad2, Mail, Lock, User } from "lucide-react"
+import { supabase } from "@/lib/supabase/client"
 
 export default function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -24,13 +25,48 @@ export default function AuthForm() {
     const formData = new FormData(e.currentTarget)
     const email = formData.get("email") as string
     const password = formData.get("password") as string
+    const username = formData.get("username") as string
     const isSignUp = e.currentTarget.dataset.mode === "signup"
 
     try {
-      // TODO: Implement your new authentication logic here
-      console.log("Authentication logic to be implemented")
-    } catch (err) {
-      setError("An error occurred during authentication")
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: username,
+            }
+          }
+        })
+
+        if (error) throw error
+
+        if (data.user) {
+          toast({
+            title: "Account created!",
+            description: "Please check your email to verify your account.",
+          })
+          router.push("/profile")
+        }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+
+        if (error) throw error
+
+        if (data.user) {
+          toast({
+            title: "Welcome back!",
+            description: "Successfully signed in.",
+          })
+          router.push("/")
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred during authentication")
       console.error("Authentication error:", err)
     } finally {
       setIsLoading(false)

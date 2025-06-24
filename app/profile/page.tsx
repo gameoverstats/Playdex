@@ -7,13 +7,35 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Edit, Save, X, Trophy, Target, Calendar, Flame, Star } from "lucide-react"
+import { Edit, Save, X, Trophy, Target, Calendar, Flame, Star, Camera, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { User, UserGame, UserProgress } from "@/lib/types"
 import Image from "next/image"
+
+const countries = [
+  "United States", "Canada", "United Kingdom", "Germany", "France", "Spain", "Italy",
+  "Netherlands", "Belgium", "Switzerland", "Austria", "Sweden", "Norway", "Denmark",
+  "Finland", "Poland", "Czech Republic", "Hungary", "Romania", "Bulgaria", "Greece",
+  "Portugal", "Ireland", "Australia", "New Zealand", "Japan", "South Korea", "China",
+  "India", "Brazil", "Argentina", "Mexico", "Chile", "Colombia", "Peru", "Venezuela",
+  "South Africa", "Egypt", "Nigeria", "Kenya", "Morocco", "Algeria", "Tunisia",
+  "Russia", "Ukraine", "Belarus", "Kazakhstan", "Uzbekistan", "Azerbaijan", "Georgia",
+  "Armenia", "Turkey", "Iran", "Iraq", "Saudi Arabia", "UAE", "Qatar", "Kuwait",
+  "Bahrain", "Oman", "Yemen", "Jordan", "Lebanon", "Syria", "Israel", "Palestine"
+].sort()
+
+interface ProfileFormData {
+  name: string
+  email: string
+  gender: string
+  phone: string
+  country: string
+  bio: string
+}
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
@@ -21,6 +43,14 @@ export default function ProfilePage() {
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState<ProfileFormData>({
+    name: "",
+    email: "",
+    gender: "",
+    phone: "",
+    country: "",
+    bio: ""
+  })
   const { toast } = useToast()
 
   useEffect(() => {
@@ -45,17 +75,33 @@ export default function ProfilePage() {
       if (profileError && profileError.code !== "PGRST116") throw profileError
       if (profile) {
         userProfile = profile as unknown as User
+        setForm({
+          name: (profile.name as string) || "",
+          email: (profile.email as string) || authUser.email || "",
+          gender: (profile.gender as string) || "",
+          phone: (profile.phone as string) || "",
+          country: (profile.country as string) || "",
+          bio: (profile.bio as string) || ""
+        })
       } else {
         // Fallback: create a default profile from authUser
         userProfile = {
           id: authUser.id,
           email: authUser.email ?? "",
-          full_name: authUser.email?.split("@")[0] ?? "User",
+          name: authUser.email?.split("@")[0] ?? "User",
           avatar_url: undefined,
           bio: "",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
+        setForm({
+          name: authUser.email?.split("@")[0] || "",
+          email: authUser.email || "",
+          gender: "",
+          phone: "",
+          country: "",
+          bio: ""
+        })
       }
       setUser(userProfile)
 
@@ -90,25 +136,99 @@ export default function ProfilePage() {
     }
   }
 
-  const handleUpdateProfile = async (formData: FormData) => {
-    try {
-      if (!user) return
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setForm(prev => ({ ...prev, [name]: value }))
+  }
 
-      const username = formData.get("username") as string
-      const bio = formData.get("bio") as string
+  const handleSelectChange = (name: string, value: string) => {
+    setForm(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    try {
+      setLoading(true)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", user.id)
+
+      if (updateError) throw updateError
+
+      setUser({ ...user, avatar_url: publicUrl })
+
+      toast({
+        title: "Avatar updated!",
+        description: "Your profile picture has been successfully updated.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    try {
+      setLoading(true)
+
+      // Validate required fields
+      if (!form.name.trim()) {
+        throw new Error("Username is required")
+      }
+
+      if (!form.email.trim()) {
+        throw new Error("Email is required")
+      }
 
       const { error } = await supabase
         .from("profiles")
         .update({
-          full_name: username,
-          bio,
+          name: form.name.trim(),
+          email: form.email.trim(),
+          gender: form.gender.trim(),
+          phone: form.phone.trim(),
+          country: form.country.trim(),
+          bio: form.bio.trim(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id)
 
       if (error) throw error
 
-      setUser({ ...user, full_name: username, bio })
+      setUser({ 
+        ...user, 
+        name: form.name.trim(),
+        email: form.email.trim()
+      })
       setIsEditing(false)
 
       toast({
@@ -121,6 +241,8 @@ export default function ProfilePage() {
         description: error.message,
         variant: "destructive",
       })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -166,41 +288,102 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-6">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={user.avatar_url || "/placeholder.svg"} alt={user.full_name || "User"} />
+                  <AvatarImage src={user.avatar_url || "/placeholder.svg"} alt={user.name || "User"} />
                   <AvatarFallback className="bg-purple-600 text-white text-2xl">
-                    {(user.full_name || "U").charAt(0).toUpperCase()}
+                    {(user.name || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   {isEditing ? (
-                    <form action={handleUpdateProfile} className="space-y-3">
-                      <div>
-                        <Label htmlFor="username" className="text-gray-300">
-                          Username
-                        </Label>
-                        <Input
-                          id="username"
-                          name="username"
-                          defaultValue={user.full_name}
-                          className="bg-gray-800 border-gray-600 text-white"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="bio" className="text-gray-300">
-                          Bio
-                        </Label>
-                        <Textarea
-                          id="bio"
-                          name="bio"
-                          defaultValue={user.bio || ""}
-                          placeholder="Tell us about yourself..."
-                          className="bg-gray-800 border-gray-600 text-white"
-                        />
+                    <form onSubmit={handleUpdateProfile} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="name" className="text-gray-300">Username *</Label>
+                          <Input
+                            id="name"
+                            name="name"
+                            value={form.name}
+                            onChange={handleChange}
+                            className="bg-gray-800 border-gray-600 text-white"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="email" className="text-gray-300">Email *</Label>
+                          <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={form.email}
+                            onChange={handleChange}
+                            className="bg-gray-800 border-gray-600 text-white"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="gender" className="text-gray-300">Gender</Label>
+                          <Select value={form.gender} onValueChange={(value) => handleSelectChange("gender", value)}>
+                            <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-gray-800 border-gray-600">
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="phone" className="text-gray-300">Phone Number</Label>
+                          <Input
+                            id="phone"
+                            name="phone"
+                            value={form.phone}
+                            onChange={handleChange}
+                            className="bg-gray-800 border-gray-600 text-white"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label htmlFor="country" className="text-gray-300">Country</Label>
+                          <Select value={form.country} onValueChange={(value) => handleSelectChange("country", value)}>
+                            <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                              <SelectValue placeholder="Select your country" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-gray-800 border-gray-600 max-h-60">
+                              {countries.map((country) => (
+                                <SelectItem key={country} value={country}>
+                                  {country}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label htmlFor="bio" className="text-gray-300">Bio</Label>
+                          <Textarea
+                            id="bio"
+                            name="bio"
+                            value={form.bio}
+                            onChange={handleChange}
+                            placeholder="Tell us about yourself..."
+                            className="bg-gray-800 border-gray-600 text-white min-h-[100px]"
+                          />
+                        </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button type="submit" size="sm" className="bg-green-600 hover:bg-green-700">
-                          <Save className="h-4 w-4 mr-1" />
-                          Save
+                        <Button type="submit" size="sm" className="bg-green-600 hover:bg-green-700" disabled={loading}>
+                          {loading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4 mr-1" />
+                              Save
+                            </>
+                          )}
                         </Button>
                         <Button
                           type="button"
@@ -216,8 +399,25 @@ export default function ProfilePage() {
                     </form>
                   ) : (
                     <div>
-                      <h1 className="text-3xl font-bold text-white">{user.full_name}</h1>
+                      <h1 className="text-3xl font-bold text-white">{user.name}</h1>
                       <p className="text-gray-300 mt-1">{user.bio || "No bio yet - click edit to add one!"}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {user.gender && (
+                          <Badge variant="secondary" className="bg-purple-600/20 text-purple-300">
+                            {user.gender}
+                          </Badge>
+                        )}
+                        {user.country && (
+                          <Badge variant="secondary" className="bg-blue-600/20 text-blue-300">
+                            {user.country}
+                          </Badge>
+                        )}
+                        {user.phone && (
+                          <Badge variant="secondary" className="bg-green-600/20 text-green-300">
+                            {user.phone}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-400 mt-2">
                         Member since {new Date(user.created_at).toLocaleDateString()}
                       </p>
@@ -226,55 +426,84 @@ export default function ProfilePage() {
                 </div>
               </div>
               {!isEditing && (
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(true)}
-                  className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
+                <div className="flex space-x-2">
+                  <div>
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                    />
+                    <label htmlFor="avatar-upload">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white"
+                        disabled={loading}
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Change Photo
+                      </Button>
+                    </label>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(true)}
+                    className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </div>
               )}
             </div>
           </CardHeader>
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card className="bg-black/50 border-purple-500/20 backdrop-blur-sm">
-            <CardContent className="p-4 text-center">
-              <Star className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-white">{getTotalXP()}</div>
-              <div className="text-sm text-gray-400">Total XP</div>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Trophy className="h-5 w-5 text-yellow-400" />
+                <span className="text-gray-300">Total XP</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{getTotalXP()}</p>
             </CardContent>
           </Card>
 
           <Card className="bg-black/50 border-purple-500/20 backdrop-blur-sm">
-            <CardContent className="p-4 text-center">
-              <Target className="h-8 w-8 text-green-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-white">{getCompletedTasks()}</div>
-              <div className="text-sm text-gray-400">Tasks Completed</div>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Target className="h-5 w-5 text-green-400" />
+                <span className="text-gray-300">Tasks Completed</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{getCompletedTasks()}</p>
             </CardContent>
           </Card>
 
           <Card className="bg-black/50 border-purple-500/20 backdrop-blur-sm">
-            <CardContent className="p-4 text-center">
-              <Flame className="h-8 w-8 text-orange-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-white">{getCurrentStreak()}</div>
-              <div className="text-sm text-gray-400">Day Streak</div>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Flame className="h-5 w-5 text-orange-400" />
+                <span className="text-gray-300">Current Streak</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{getCurrentStreak()}</p>
             </CardContent>
           </Card>
 
           <Card className="bg-black/50 border-purple-500/20 backdrop-blur-sm">
-            <CardContent className="p-4 text-center">
-              <Calendar className="h-8 w-8 text-blue-400 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-white">{getTotalHours()}</div>
-              <div className="text-sm text-gray-400">Hours Played</div>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-blue-400" />
+                <span className="text-gray-300">Hours Played</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{getTotalHours()}</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Profile Tabs */}
         <Tabs defaultValue="games" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-gray-800 border-gray-700">
             <TabsTrigger

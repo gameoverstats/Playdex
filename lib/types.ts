@@ -1,11 +1,14 @@
 export interface User {
   id: string
   email: string
-  full_name: string
+  name: string
   avatar_url?: string
   bio?: string
   created_at: string
   updated_at: string
+  gender?: string
+  phone?: string
+  country?: string
 }
 
 export interface Game {

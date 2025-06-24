@@ -8,6 +8,10 @@ ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
 create table public.profiles (
     id uuid references auth.users on delete cascade not null primary key,
     full_name text,
+    email text,
+    gender text,
+    phone text,
+    country text,
     avatar_url text,
     bio text,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
