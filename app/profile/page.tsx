@@ -146,52 +146,40 @@ export default function ProfilePage() {
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
 
     try {
-      setLoading(true)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`
-      const filePath = `avatars/${fileName}`
+      setLoading(true);
+      const data = new FormData();
+      data.append("file", file);
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file)
+      const res = await fetch("/api/upload-avatar", {
+        method: "POST",
+        body: data,
+      });
 
-      if (uploadError) throw uploadError
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || json.message);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath)
-
-      // Update profile with new avatar URL
+      // ✅ Save to Supabase
+      const imageUrl = json.url;
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", user.id)
+        .update({ avatar_url: imageUrl, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      if (updateError) throw updateError;
 
-      if (updateError) throw updateError
+      setUser({ ...user, avatar_url: imageUrl });
+      toast({ title: "Avatar updated!", description: "Success!" });
 
-      setUser({ ...user, avatar_url: publicUrl })
-
-      toast({
-        title: "Avatar updated!",
-        description: "Your profile picture has been successfully updated.",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      })
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -428,24 +416,21 @@ export default function ProfilePage() {
               {!isEditing && (
                 <div className="flex space-x-2">
                   <div>
-                    <input
-                      type="file"
-                      id="avatar-upload"
-                      accept="image/*"
-                      onChange={handleAvatarUpload}
-                      className="hidden"
-                    />
-                    <label htmlFor="avatar-upload">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white"
-                        disabled={loading}
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Change Photo
-                      </Button>
-                    </label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="relative overflow-hidden border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white"
+                      disabled={loading}
+                    >
+                      <Camera className="h-10 w-4 mr-2" />
+                      Change Photo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                    </Button>
                   </div>
                   <Button
                     variant="outline"

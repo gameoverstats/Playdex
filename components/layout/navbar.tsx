@@ -72,7 +72,7 @@ export function Navbar() {
 
   if (loading) {
     return (
-      <nav className="bg-black/50 border-b border-purple-500/20 backdrop-blur-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/50 border-b border-purple-500/20 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -91,7 +91,7 @@ export function Navbar() {
   }
 
   return (
-    <nav className="bg-black/50 border-b border-purple-500/20 backdrop-blur-sm">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/50 border-b border-purple-500/20 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
@@ -112,6 +112,11 @@ export function Navbar() {
                 <Link href="/guide">
                   <Button variant="ghost" className="text-gray-300 hover:text-white">
                     Guides
+                  </Button>
+                </Link>
+                <Link href="/about">
+                  <Button variant="ghost" className="text-gray-300 hover:text-white">
+                    About
                   </Button>
                 </Link>
                 
