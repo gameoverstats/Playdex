@@ -104,6 +104,11 @@ export function Navbar() {
           <div className="flex items-center space-x-4">
             {isLoggedIn ? (
               <>
+                <Link href="/home">
+                  <Button variant="ghost" className="text-gray-300 hover:text-white">
+                    Home
+                  </Button>
+                </Link>
                 <Link href="/tracker">
                   <Button variant="ghost" className="text-gray-300 hover:text-white">
                     Tracker

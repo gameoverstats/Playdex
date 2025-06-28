@@ -1,108 +1,108 @@
-"use client"
+  "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase/client"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useToast } from "@/hooks/use-toast"
-import { User, Camera, Save, Loader2 } from "lucide-react"
-import type { User as UserType } from "@/lib/types"
+  import { useState, useEffect } from "react"
+  import { useRouter } from "next/navigation"
+  import { supabase } from "@/lib/supabase/client"
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+  import { Button } from "@/components/ui/button"
+  import { Input } from "@/components/ui/input"
+  import { Label } from "@/components/ui/label"
+  import { Textarea } from "@/components/ui/textarea"
+  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+  import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+  import { useToast } from "@/hooks/use-toast"
+  import { User, Camera, Save, Loader2 } from "lucide-react"
+  import type { User as UserType } from "@/lib/types"
 
-interface ProfileFormData {
-  name: string
-  email: string
-  gender: string
-  phone: string
-  country: string
-  bio: string
-}
-
-const countries = [
-  "United States", "Canada", "United Kingdom", "Germany", "France", "Spain", "Italy",
-  "Netherlands", "Belgium", "Switzerland", "Austria", "Sweden", "Norway", "Denmark",
-  "Finland", "Poland", "Czech Republic", "Hungary", "Romania", "Bulgaria", "Greece",
-  "Portugal", "Ireland", "Australia", "New Zealand", "Japan", "South Korea", "China",
-  "India", "Brazil", "Argentina", "Mexico", "Chile", "Colombia", "Peru", "Venezuela",
-  "South Africa", "Egypt", "Nigeria", "Kenya", "Morocco", "Algeria", "Tunisia",
-  "Russia", "Ukraine", "Belarus", "Kazakhstan", "Uzbekistan", "Azerbaijan", "Georgia",
-  "Armenia", "Turkey", "Iran", "Iraq", "Saudi Arabia", "UAE", "Qatar", "Kuwait",
-  "Bahrain", "Oman", "Yemen", "Jordan", "Lebanon", "Syria", "Israel", "Palestine"
-].sort()
-
-export default function ProfileSetupForm() {
-  const [form, setForm] = useState<ProfileFormData>({
-    name: "",
-    email: "",
-    gender: "",
-    phone: "",
-    country: "",
-    bio: ""
-  })
-  const [loading, setLoading] = useState(false)
-  const [user, setUser] = useState<UserType | null>(null)
-  const [avatarUrl, setAvatarUrl] = useState<string>("")
-  const router = useRouter()
-  const { toast } = useToast()
-
-  useEffect(() => {
-    fetchUserProfile()
-  }, [])
-
-  const fetchUserProfile = async () => {
-    try {
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-      if (authError || !authUser) {
-        router.push("/auth")
-        return
-      }
-
-      // Fetch existing profile
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", authUser.id)
-        .single()
-
-      if (profileError && profileError.code !== "PGRST116") {
-        throw profileError
-      }
-
-      if (profile) {
-        setUser(profile as unknown as UserType)
-        setForm({
-          name: (profile.name as string) || "",
-          email: (profile.email as string) || authUser.email || "",
-          gender: (profile.gender as string) || "",
-          phone: (profile.phone as string) || "",
-          country: (profile.country as string) || "",
-          bio: (profile.bio as string) || ""
-        })
-        setAvatarUrl((profile.avatar_url as string) || "")
-      } else {
-        // Set default values for new user
-        setForm({
-          name: authUser.email?.split("@")[0] || "",
-          email: authUser.email || "",
-          gender: "",
-          phone: "",
-          country: "",
-          bio: ""
-        })
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
+  interface ProfileFormData {
+    name: string
+    email: string
+    gender: string
+    phone: string
+    country: string
+    bio: string
   }
+
+  const countries = [
+    "United States", "Canada", "United Kingdom", "Germany", "France", "Spain", "Italy",
+    "Netherlands", "Belgium", "Switzerland", "Austria", "Sweden", "Norway", "Denmark",
+    "Finland", "Poland", "Czech Republic", "Hungary", "Romania", "Bulgaria", "Greece",
+    "Portugal", "Ireland", "Australia", "New Zealand", "Japan", "South Korea", "China",
+    "India", "Brazil", "Argentina", "Mexico", "Chile", "Colombia", "Peru", "Venezuela",
+    "South Africa", "Egypt", "Nigeria", "Kenya", "Morocco", "Algeria", "Tunisia",
+    "Russia", "Ukraine", "Belarus", "Kazakhstan", "Uzbekistan", "Azerbaijan", "Georgia",
+    "Armenia", "Turkey", "Iran", "Iraq", "Saudi Arabia", "UAE", "Qatar", "Kuwait",
+    "Bahrain", "Oman", "Yemen", "Jordan", "Lebanon", "Syria", "Israel", "Palestine"
+  ].sort()
+
+  export default function ProfileSetupForm() {
+    const [form, setForm] = useState<ProfileFormData>({
+      name: "",
+      email: "",
+      gender: "",
+      phone: "",
+      country: "",
+      bio: ""
+    })
+    const [loading, setLoading] = useState(false)
+    const [user, setUser] = useState<UserType | null>(null)
+    const [avatarUrl, setAvatarUrl] = useState<string>("")
+    const router = useRouter()
+    const { toast } = useToast()
+
+    useEffect(() => {
+      fetchUserProfile()
+    }, [])
+
+    const fetchUserProfile = async () => {
+      try {
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+        if (authError || !authUser) {
+          router.push("/auth")
+          return
+        }
+
+        // Fetch existing profile
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authUser.id)
+          .single()
+
+        if (profileError && profileError.code !== "PGRST116") {
+          throw profileError
+        }
+
+        if (profile) {
+          setUser(profile as unknown as UserType)
+          setForm({
+            name: (profile.name as string) || "",
+            email: (profile.email as string) || authUser.email || "",
+            gender: (profile.gender as string) || "",
+            phone: (profile.phone as string) || "",
+            country: (profile.country as string) || "",
+            bio: (profile.bio as string) || ""
+          })
+          setAvatarUrl((profile.avatar_url as string) || "")
+        } else {
+          // Set default values for new user
+          setForm({
+            name: authUser.email?.split("@")[0] || "",
+            email: authUser.email || "",
+            gender: "",
+            phone: "",
+            country: "",
+            bio: ""
+          })
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        })
+      }
+    }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target

@@ -7,14 +7,6 @@ import Link from "next/link";
 // Define your sidebar sections and example icons
 const sections = [
   {
-    title: "Main",
-    items: [
-      { label: "Home", icon: <Home />, href: "/home-page" },
-      { label: "Tracker", icon: <Compass />, href: "/tracker" },
-      { label: "Guide", icon: <BookOpen />, href: "/guide" },
-    ],
-  },
-  {
     title: "Game News",
     items: [
       { label: "Latest Updates", icon: <Newspaper />, href: "#" },
