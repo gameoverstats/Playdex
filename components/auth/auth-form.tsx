@@ -18,6 +18,7 @@ export default function AuthForm() {
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    console.log('Form submit event fired');
     e.preventDefault()
     setIsLoading(true)
     setError(null)
@@ -142,6 +143,7 @@ export default function AuthForm() {
                   type="submit"
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                   disabled={isLoading}
+                  onClick={() => console.log('Sign In button clicked')}
                 >
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
@@ -205,6 +207,7 @@ export default function AuthForm() {
                   type="submit"
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                   disabled={isLoading}
+                  onClick={() => console.log('Sign Up button clicked')}
                 >
                   {isLoading ? "Creating account..." : "Sign Up"}
                 </Button>
