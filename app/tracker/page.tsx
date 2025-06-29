@@ -19,8 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trophy, Clock, Target, Edit, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import type { Game, UserGame } from "@/lib/types"
+import type { Game, UserGame, GameStatLog } from "@/lib/types"
 import Image from "next/image"
+import { GameStatForm } from "@/components/profile/game-stat-form"
+import { differenceInDays, parseISO } from "date-fns"
 
 export default function TrackerPage() {
   const [userGames, setUserGames] = useState<UserGame[]>([])
@@ -28,11 +30,20 @@ export default function TrackerPage() {
   const [loading, setLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const { toast } = useToast()
+  const [statLogs, setStatLogs] = useState<Record<string, GameStatLog[]>>({})
+  const [logModal, setLogModal] = useState<{ open: boolean; userGameId?: string }>({ open: false })
 
   useEffect(() => {
     fetchUserGames()
     fetchGames()
   }, [])
+
+  useEffect(() => {
+    if (userGames.length > 0) {
+      fetchAllStatLogs()
+    }
+    // eslint-disable-next-line
+  }, [userGames])
 
   const fetchUserGames = async () => {
     try {
@@ -76,6 +87,20 @@ export default function TrackerPage() {
         variant: "destructive",
       })
     }
+  }
+
+  const fetchAllStatLogs = async () => {
+    const logs: Record<string, GameStatLog[]> = {}
+    for (const ug of userGames) {
+      const { data, error } = await supabase
+        .from("game_stat_logs")
+        .select("*")
+        .eq("user_game_id", ug.id)
+        .order("created_at", { ascending: false })
+        .limit(2)
+      if (!error && data) logs[ug.id] = data as unknown as GameStatLog[]
+    }
+    setStatLogs(logs)
   }
 
   const handleAddGame = async (formData: FormData) => {
@@ -177,9 +202,9 @@ export default function TrackerPage() {
               <form action={handleAddGame} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="game_id">Game</Label>
-                  <Select name="game_id" required>
+                  <Select name="game_id" required disabled={games.length === 0}>
                     <SelectTrigger className="bg-gray-800 border-gray-600">
-                      <SelectValue placeholder="Select a game" />
+                      <SelectValue placeholder={games.length === 0 ? "No games found" : "Select a game"} />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
                       {games.map((game) => (
@@ -187,6 +212,9 @@ export default function TrackerPage() {
                           {game.name}
                         </SelectItem>
                       ))}
+                      {games.length === 0 && (
+                        <div className="px-4 py-2 text-gray-400">No games found</div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -265,80 +293,129 @@ export default function TrackerPage() {
           </Card>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {userGames.map((userGame) => (
-              <Card
-                key={userGame.id}
-                className="bg-black/50 border-purple-500/20 backdrop-blur-sm hover:border-purple-400/40 transition-colors"
-              >
-                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                  <div className="flex items-center space-x-3 flex-1">
-                    <Image
-                      src={userGame.game?.icon_url || "/placeholder.svg?height=40&width=40"}
-                      alt={userGame.game?.name || "Game"}
-                      width={40}
-                      height={40}
-                      className="rounded-lg"
-                    />
-                    <div>
-                      <CardTitle className="text-white text-lg">{userGame.game?.name}</CardTitle>
-                      <CardDescription className="text-gray-400">{userGame.game?.platform}</CardDescription>
+            {userGames.map((userGame) => {
+              const logs = statLogs[userGame.id] || []
+              const latest = logs[0]
+              const prev = logs[1]
+              // Growth comparison helpers
+              const growth = (field: keyof GameStatLog) => {
+                if (!latest || !prev || typeof latest[field] !== "number" || typeof prev[field] !== "number") return null
+                const diff = (latest[field] as number) - (prev[field] as number)
+                if (diff === 0) return <span className="text-gray-400 ml-2">+0</span>
+                return (
+                  <span className={diff > 0 ? "text-green-400 ml-2" : "text-red-400 ml-2"}>
+                    {diff > 0 ? "+" : ""}{diff.toFixed(2)}
+                  </span>
+                )
+              }
+              // Cooldown logic
+              let cooldownDays = 0
+              let cooldownActive = false
+              if (latest?.created_at) {
+                const last = parseISO(latest.created_at)
+                cooldownDays = 7 - differenceInDays(new Date(), last)
+                cooldownActive = cooldownDays > 0
+              }
+              return (
+                <Card key={userGame.id} className="bg-black/50 border-purple-500/20 backdrop-blur-sm hover:border-purple-400/40 transition-colors">
+                  <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                    <div className="flex items-center space-x-3 flex-1">
+                      <Image
+                        src={userGame.game?.icon_url || "/placeholder.svg?height=40&width=40"}
+                        alt={userGame.game?.name || "Game"}
+                        width={40}
+                        height={40}
+                        className="rounded-lg"
+                      />
+                      <div>
+                        <CardTitle className="text-white text-lg">{userGame.game?.name}</CardTitle>
+                        <CardDescription className="text-gray-400">{userGame.game?.platform}</CardDescription>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex space-x-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-gray-400 hover:text-red-400"
-                      onClick={() => handleDeleteGame(userGame.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Rank</span>
-                    <Badge variant="secondary" className="bg-purple-600/20 text-purple-300">
-                      {userGame.rank || "Unranked"}
-                    </Badge>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300 flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      Hours
-                    </span>
-                    <span className="text-white font-medium">{userGame.hours_played}</span>
-                  </div>
-
-                  {userGame.kd_ratio && (
+                    <div className="flex space-x-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 hover:text-red-400"
+                        onClick={() => handleDeleteGame(userGame.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Rank</span>
+                      <Badge variant="secondary" className="bg-purple-600/20 text-purple-300">
+                        {latest?.rank || userGame.rank || "Unranked"}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300 flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        Matches
+                      </span>
+                      <span className="text-white font-medium">{latest?.matches_played ?? "-"}</span>
+                      {growth("matches_played")}
+                    </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300 flex items-center">
                         <Target className="h-4 w-4 mr-1" />
                         K/D
                       </span>
-                      <span className="text-white font-medium">{userGame.kd_ratio}</span>
+                      <span className="text-white font-medium">{latest?.kd_ratio ?? "-"}</span>
+                      {growth("kd_ratio")}
                     </div>
-                  )}
-
-                  {userGame.game_tag && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-300">Tag</span>
-                      <span className="text-white font-medium text-sm">{userGame.game_tag}</span>
-                    </div>
-                  )}
-
-                  {userGame.notes && (
-                    <div className="pt-2 border-t border-gray-700">
-                      <p className="text-gray-300 text-sm">{userGame.notes}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    {/* Growth comparison for F/D, headshot %, etc. */}
+                    {typeof latest?.f_d_ratio === "number" && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-300">F/D Ratio</span>
+                        <span className="text-white font-medium">{latest.f_d_ratio}</span>
+                        {growth("f_d_ratio")}
+                      </div>
+                    )}
+                    {typeof latest?.headshot_percent === "number" && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-300">Headshot %</span>
+                        <span className="text-white font-medium">{latest.headshot_percent}</span>
+                        {growth("headshot_percent")}
+                      </div>
+                    )}
+                    {latest?.season && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-300">Season</span>
+                        <span className="text-white font-medium">{latest.season}</span>
+                      </div>
+                    )}
+                    {latest?.notes && (
+                      <div className="pt-2 border-t border-gray-700">
+                        <p className="text-gray-300 text-sm">{latest.notes}</p>
+                      </div>
+                    )}
+                    <Button
+                      className="w-full bg-purple-600 hover:bg-purple-700 mt-2"
+                      onClick={() => setLogModal({ open: true, userGameId: userGame.id })}
+                      disabled={cooldownActive}
+                    >
+                      Log Weekly Stats
+                    </Button>
+                    {cooldownActive && (
+                      <div className="text-yellow-400 text-xs mt-1">Come back in {cooldownDays} day{cooldownDays !== 1 ? "s" : ""} to log new stats.</div>
+                    )}
+                    <GameStatForm
+                      open={logModal.open && logModal.userGameId === userGame.id}
+                      onOpenChange={(open) => setLogModal({ open, userGameId: open ? userGame.id : undefined })}
+                      userGameId={userGame.id}
+                      lastLog={latest}
+                      onSubmitSuccess={fetchAllStatLogs}
+                    />
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>

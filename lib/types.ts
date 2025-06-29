@@ -104,3 +104,16 @@ export interface PUBGWeeklyPlanner {
   subtitle: string;
   tasks: PUBGDayPlan[];
 }
+
+export interface GameStatLog {
+  id: string;
+  user_game_id: string;
+  rank?: string;
+  kd_ratio?: number;
+  f_d_ratio?: number;
+  matches_played?: number;
+  season?: string;
+  headshot_percent?: number;
+  notes?: string;
+  created_at: string;
+}

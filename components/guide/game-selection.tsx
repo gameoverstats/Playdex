@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 interface GameSelectionProps {
-  onGameSelect: (game: string) => void;
+  onGameSelect: (gameId: string) => void;
 }
 
 export const GameSelection: React.FC<GameSelectionProps> = ({ onGameSelect }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [games, setGames] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchGames = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('games').select('id, name').order('name');
+      if (error) setError(error.message);
+      else setGames((data as { id: string; name: string }[]) || []);
+      setLoading(false);
+    };
+    fetchGames();
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-gray-100 font-inter p-4">
@@ -21,21 +36,28 @@ export const GameSelection: React.FC<GameSelectionProps> = ({ onGameSelect }) =>
             onClick={() => setShowDropdown(!showDropdown)}
             className="px-8 py-4 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transition duration-300 ease-in-out"
           >
-            Available Guides
+            {loading ? 'Loading...' : 'Available Guides'}
           </button>
           {showDropdown && (
             <div className="origin-top-right absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
               <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                <button
-                  onClick={() => {
-                    onGameSelect('PUBG');
-                    setShowDropdown(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-600 hover:text-white rounded-md"
-                  role="menuitem"
-                >
-                  PUBG: Battlegrounds
-                </button>
+                {error && <div className="text-red-400 px-4 py-2">{error}</div>}
+                {games.map((game) => (
+                  <button
+                    key={game.id}
+                    onClick={() => {
+                      onGameSelect(game.id);
+                      setShowDropdown(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-600 hover:text-white rounded-md"
+                    role="menuitem"
+                  >
+                    {game.name}
+                  </button>
+                ))}
+                {games.length === 0 && !loading && !error && (
+                  <div className="px-4 py-2 text-gray-400">No games found</div>
+                )}
               </div>
             </div>
           )}
